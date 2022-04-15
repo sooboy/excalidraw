@@ -68,13 +68,13 @@ import {
 import { decryptData } from "../../data/encryption";
 import { resetBrowserStateVersions } from "../data/tabSync";
 import { LocalData } from "../data/LocalData";
-import { atom } from "jotai";
+import { atom, useAtom } from "jotai";
 import { jotaiStore } from "../jotai";
 
 export const collabAPIAtom = atom<CollabAPI | null>(null);
+export const collabDialogShownAtom = atom(false);
 
 interface CollabState {
-  modalIsShown: boolean;
   errorMessage: string;
   username: string;
   userState: UserIdleState;
@@ -88,16 +88,17 @@ export interface CollabAPI {
   isCollaborating: () => boolean;
   onPointerUpdate: CollabInstance["onPointerUpdate"];
   initializeSocketClient: CollabInstance["initializeSocketClient"];
-  onCollabButtonClick: CollabInstance["onCollabButtonClick"];
   broadcastElements: CollabInstance["broadcastElements"];
   fetchImageFilesFromFirebase: CollabInstance["fetchImageFilesFromFirebase"];
   setUsername: (username: string) => void;
 }
 
-interface Props {
+interface PublicProps {
   excalidrawAPI: ExcalidrawImperativeAPI;
   onRoomClose?: () => void;
 }
+
+type Props = PublicProps & { modalIsShown: boolean };
 
 class CollabWrapper extends PureComponent<Props, CollabState> {
   portal: Portal;
@@ -115,7 +116,6 @@ class CollabWrapper extends PureComponent<Props, CollabState> {
   constructor(props: Props) {
     super(props);
     this.state = {
-      modalIsShown: false,
       errorMessage: "",
       username: importUsernameFromLocalStorage() || "",
       userState: UserIdleState.ACTIVE,
@@ -160,7 +160,6 @@ class CollabWrapper extends PureComponent<Props, CollabState> {
       isCollaborating: this.isCollaborating,
       onPointerUpdate: this.onPointerUpdate,
       initializeSocketClient: this.initializeSocketClient,
-      onCollabButtonClick: this.onCollabButtonClick,
       broadcastElements: this.broadcastElements,
       fetchImageFilesFromFirebase: this.fetchImageFilesFromFirebase,
       setUsername: this.setUsername,
@@ -737,7 +736,7 @@ class CollabWrapper extends PureComponent<Props, CollabState> {
   }, SYNC_FULL_SCENE_INTERVAL_MS);
 
   handleClose = () => {
-    this.setState({ modalIsShown: false });
+    jotaiStore.set(collabDialogShownAtom, false);
   };
 
   setUsername = (username: string) => {
@@ -749,12 +748,6 @@ class CollabWrapper extends PureComponent<Props, CollabState> {
     saveUsernameToLocalStorage(username);
   };
 
-  onCollabButtonClick = () => {
-    this.setState({
-      modalIsShown: true,
-    });
-  };
-
   isSyncableElement = (element: ExcalidrawElement) => {
     return element.isDeleted || !isInvisiblySmallElement(element);
   };
@@ -763,7 +756,9 @@ class CollabWrapper extends PureComponent<Props, CollabState> {
     elements.filter((element) => this.isSyncableElement(element));
 
   render() {
-    const { modalIsShown, username, errorMessage, activeRoomLink } = this.state;
+    const { username, errorMessage, activeRoomLink } = this.state;
+
+    const { modalIsShown } = this.props;
 
     return (
       <>
@@ -805,4 +800,11 @@ if (
   window.collab = window.collab || ({} as Window["collab"]);
 }
 
-export default CollabWrapper;
+const _CollabWrapper: React.FC<PublicProps> = (props) => {
+  const [collabDialogShown] = useAtom(collabDialogShownAtom);
+  return <CollabWrapper {...props} modalIsShown={collabDialogShown} />;
+};
+
+export default _CollabWrapper;
+
+export type TCollabClass = CollabWrapper;
