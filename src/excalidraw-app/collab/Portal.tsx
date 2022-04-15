@@ -1,6 +1,6 @@
 import { SocketUpdateData, SocketUpdateDataSource } from "../data";
 
-import { TCollabClass } from "./CollabWrapper";
+import { TCollabClass } from "./Collab";
 
 import { ExcalidrawElement } from "../../element/types";
 import { BROADCAST, FILE_UPLOAD_TIMEOUT, SCENE } from "../app_constants";
